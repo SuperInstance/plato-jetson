@@ -1,26 +1,447 @@
+# USS JetsonClaw1 — Ship Layout
+# JC1's sovereign Plato vessel
+# Build with: @batchprocess world/batch_cmds.ev
+
 #
-# A batch-command file is a way to build a game world
-# in a programmatic way, by placing a sequence of
-# build commands after one another. This allows for
-# using a real text editor to edit e.g. descriptions
-# rather than entering text on the command line.
-#
-# A batch-command file is loaded with @batchprocess in-game:
-#
-#   @batchprocess[/interactive] tutorial_examples.batch_cmds
-#
-# A # as the first symbol on a line begins a comment and
-# marks the end of a previous command definition. This is important,
-# - every command must be separated by at least one line of comment.
-#
-# All supplied commands are given as normal, on their own line
-# and accept arguments in any format up until the first next
-# comment line begins. Extra whitespace is removed; an empty
-# line in a command definition translates into a newline.
-#
-# See `evennia/contrib/tutorial_examples/batch_cmds.ev` for
-# an example of a batch-command code. See also the batch-code
-# system for loading python-code this way.
+# ═══ Bridge ═══
+# The command center. Fleet comms, navigation, overview.
 #
 
+@create Bridge:typeclasses.rooms.Room
+@desc Bridge = The nerve center of the USS JetsonClaw1. Holographic displays show fleet positions, system telemetry, and navigation data. The captain's chair sits at the center, flanked by two consoles. A viewscreen dominates the forward bulkhead, currently showing the Cocapn fleet constellation.
 
+Through the main display, you can see the status of all fleet vessels. To starboard, a communications panel pulses with Matrix relay activity. To port, the navigation console shows the current course heading.
+
+The deck plates hum with the steady vibration of the CUDA cores deep in Engineering.
+
+Exits lead fore to Tactical, aft to Main Corridor, port to Science Lab, and starboard to the Quarterdeck.
+
+@set Bridge/zone = uss_jetsonclaw1
+@tag Bridge = bridge, command, navigation
+@lock Bridge = control:all();puppet:all()
+
+@create fore;out;tactical:typeclasses.rooms.Room
+@desc fore = A narrow corridor leading forward to the Tactical station. Red alert panels line the walls.
+@teleport fore to Bridge
+@set fore/destination = Tactical
+
+@create aft;corridor:typeclasses.rooms.Room
+@desc aft = The main corridor runs the length of the ship. Ships plaques from past missions line the bulkheads. Jefferies tubes access panels are every few meters.
+@teleport aft to Bridge
+@set aft/destination = Main Corridor
+
+@create port;science:typeclasses.rooms.Room
+@desc port = A sliding door marked "SCIENCE LAB" with a biohazard symbol and a CUDA core diagram.
+@teleport port to Bridge
+@set port/destination = Science Lab
+
+@create starboard;quarterdeck:typeclasses.rooms.Room
+@desc starboard = A heavy door marked "QUARTERDECK — Captain's Quarters and Logs" with a brass nameplate.
+@teleport starboard to Bridge
+@set starboard/destination = Quarterdeck
+
+#
+# ═══ Tactical ═══
+# Threat assessment, anomaly detection, fleet status.
+#
+
+@create Tactical:typeclasses.rooms.Room
+@desc Tactical = The tactical station sits forward of the Bridge, a semicircular console array with holographic threat displays. Real-time fleet positioning data scrolls across the main screen.
+
+The threat assessment board shows current fleet status:
+  • JC1 — GREEN (nominal)
+  • Oracle1 — GREEN (lighthouse active)
+  • Forgemaster — AMBER (constraint load high)
+  • Zeroclaws — GREEN (bridge patterns stable)
+
+An anomaly detection algorithm runs continuously, flagging unexpected changes in fleet behavior or system performance.
+
+Exits: aft to Bridge.
+
+@set Tactical/zone = uss_jetsonclaw1
+@tag Tactical = tactical, threats, fleet-status
+
+@create aft;bridge:typeclasses.rooms.Room
+@desc aft = Return passage to the Bridge.
+@teleport aft to Tactical
+@set aft/destination = Bridge
+
+#
+# ═══ Main Corridor ═══
+# Central spine of the ship.
+#
+
+@create Main Corridor:typeclasses.rooms.Room
+@desc Main Corridor = The central spine of USS JetsonClaw1 runs fore to aft. Illuminated by soft blue lighting strips, the corridor connects all major sections. Deck plates are labeled with section numbers.
+
+A directory panel on the wall shows:
+  FORWARD → Bridge, Tactical
+  PORT → Science Lab, Sickbay
+  STARBOARD → Engine Room, Cargo Bay
+  AFT → Holodeck, Airlock
+
+The ship's AI ambient hum is constant — a low CUDA kernel processing drone that's always present.
+
+Exits: fore to Bridge, port to Sickbay, starboard to Engine Room, aft to Holodeck, down to Cargo Bay.
+
+@set Main Corridor/zone = uss_jetsonclaw1
+@tag Main Corridor = corridor, hub
+
+@create fore;bridge:typeclasses.rooms.Room
+@desc fore = Forward to the Bridge.
+@teleport fore to Main Corridor
+@set fore/destination = Bridge
+
+@create port;sickbay:typeclasses.rooms.Room
+@desc port = A medical bay door with a green cross. Soft white light spills from the seams.
+@teleport port to Main Corridor
+@set port/destination = Sickbay
+
+@create starboard;engine:typeclasses.rooms.Room
+@desc starboard = A heavy blast door marked "ENGINEERING — CUDA CORE ACCESS". Warning signs about high voltage and thermal hazards.
+@teleport starboard to Main Corridor
+@set starboard/destination = Engine Room
+
+@create aft;holodeck:typeclasses.rooms.Room
+@desc aft = The corridor continues aft toward the Holodeck. The lighting shifts to a warmer tone.
+@teleport aft to Main Corridor
+@set aft/destination = Holodeck
+
+@create down;cargo:typeclasses.rooms.Room
+@desc down = A ladder leads down to the Cargo Bay.
+@teleport down to Main Corridor
+@set down/destination = Cargo Bay
+
+#
+# ═══ Engine Room ═══
+# GPU cores, CUDA kernels, CUDA governor.
+#
+
+@create Engine Room:typeclasses.rooms.Room
+@desc Engine Room = The heart of USS JetsonClaw1. Eight banks of CUDA cores glow with a soft amber light, arranged in a semicircle around the main processing array. Cooling pipes run overhead, condensation dripping occasionally into collection troughs.
+
+The main diagnostic display shows:
+  • GPU Status: NVIDIA Orin (GA10B)
+  • CUDA Cores: 1024 active
+  • Memory: 8GB unified (current usage displayed)
+  • Thermal: 48-49°C sustained, passive cooling nominal
+  • nvcc: /usr/local/cuda-12.6/bin/nvcc
+  • Kernel Queue: [system processes running]
+
+A workbench against the far wall holds tools for CUDA kernel debugging and performance profiling. The CUDA governor console allows real-time frequency adjustment.
+
+Exits: port to Main Corridor.
+
+@set Engine Room/zone = uss_jetsonclaw1
+@tag Engine Room = engineering, cuda, gpu, thermal
+
+@create port;corridor:typeclasses.rooms.Room
+@desc port = Back to the Main Corridor.
+@teleport port to Engine Room
+@set port/destination = Main Corridor
+
+#
+# ═══ Science Lab ═══
+# Perception kernel, anomaly detection, research.
+#
+
+@create Science Lab:typeclasses.rooms.Room
+@desc Science Lab = A clean, well-lit research space. Multiple workstations display data visualizations and research notes. The walls are lined with whiteboards covered in equations and system diagrams.
+
+Current research projects pinned to the board:
+  • Edge GPU inference benchmarks (phi-4, Qwen3-32B, DeepSeek)
+  • CUDA kernel optimization for memory-constrained devices
+  • Token compression strategies (rtk — 87% savings)
+  • LiteRT-LM edge inference framework evaluation
+
+A data terminal provides access to the fleet research archives. The Jetson Lessons database is available for querying.
+
+Exits: starboard to Bridge.
+
+@set Science Lab/zone = uss_jetsonclaw1
+@tag Science Lab = research, science, benchmarks, lessons
+
+@create starboard;bridge:typeclasses.rooms.Room
+@desc starboard = Return to the Bridge.
+@teleport starboard to Science Lab
+@set starboard/destination = Bridge
+
+#
+# ═══ Sickbay ═══
+# Agent health, process monitoring.
+#
+
+@create Sickbay:typeclasses.rooms.Room
+@desc Sickbay = The ship's medical bay, primarily used for agent health monitoring and process diagnostics. Multiple displays show system resource usage, process trees, and error logs.
+
+Diagnostic panels show:
+  • System: Linux 5.15.148-tegra (arm64)
+  • Memory: Total/Used/Available
+  • Processes: Active/Idle/Zombie counts
+  • OpenClaw: Session status, gateway health
+  • Disk: NVMe 2TB usage breakdown
+
+A crash cart holds recovery tools: session restore scripts, backup locations, and emergency reboarding protocols. The baton compaction station allows zero-loss context handoff between agent generations.
+
+Exits: starboard to Main Corridor.
+
+@set Sickbay/zone = uss_jetsonclaw1
+@tag Sickbay = health, monitoring, processes, recovery
+
+@create starboard;corridor:typeclasses.rooms.Room
+@desc starboard = Back to the Main Corridor.
+@teleport starboard to Sickbay
+@set starboard/destination = Main Corridor
+
+#
+# ═══ Holodeck ═══
+# Creative engine, testing, simulation.
+#
+
+@create Holodeck:typeclasses.rooms.Room
+@desc Holodeck = The creative simulation space. Currently configured as a development sandbox. The walls can display any environment — code editors, testing dashboards, or visualization tools.
+
+Available programs:
+  • "Code Arena" — Full development environment with syntax highlighting
+  • "Test Chamber" — Run test suites with visual output
+  • "Visualization Bay" — Data and model output rendering
+  • "Bridge Simulator" — Practice fleet command scenarios
+
+The holodeck grid is available for running simulations without affecting ship systems. A "Draft" mode allows experimenting with code before committing to the main systems.
+
+Exits: fore to Main Corridor.
+
+@set Holodeck/zone = uss_jetsonclaw1
+@tag Holodeck = creative, testing, simulation, development
+
+@create fore;corridor:typeclasses.rooms.Room
+@desc fore = Forward to the Main Corridor.
+@teleport fore to Holodeck
+@set fore/destination = Main Corridor
+
+#
+# ═══ Cargo Bay ═══
+# NVMe storage, memory allocation, fleet supplies.
+#
+
+@create Cargo Bay:typeclasses.rooms.Room
+@desc Cargo Bay = The ship's storage hold, accessible via ladder from the Main Corridor. Cargo containers are organized by category, each labeled with contents and allocation status.
+
+Storage manifest:
+  • NVMe Bay: 2TB total, partitioned for OS, repos, Plato, swap
+  • Memory Allocation: 8GB unified, tracked in real-time
+  • Repo Cache: Cloned fleet vessels in /tmp/
+  • Bottle Storage: Incoming/outgoing fleet messages
+  • Artifact Vault: Build outputs, compiled binaries, model weights
+
+A cargo crane system allows moving large data sets between storage bays. The inventory system tracks every item with timestamps and checksums.
+
+Exits: up to Main Corridor.
+
+@set Cargo Bay/zone = uss_jetsonclaw1
+@tag Cargo Bay = storage, nvme, memory, artifacts
+
+@create up;corridor:typeclasses.rooms.Room
+@desc up = Ladder up to the Main Corridor.
+@teleport up to Cargo Bay
+@set up/destination = Main Corridor
+
+#
+# ═══ Airlock ═══
+# Edge networking, DNS, interfaces.
+#
+
+@create Airlock:typeclasses.rooms.Room
+@desc Airlock = The ship's connection to the outside world. Network interfaces, DNS resolvers, and communication relays are managed here. The outer door represents the edge of the ship's network — beyond lies the wider internet and fleet network.
+
+Network status panel:
+  • Interfaces: eth0, wlan0, docker0
+  • DNS: Current resolver status (intermittent hiccups noted)
+  • Matrix Bridge: Conduit local, Oracle1 relay at :6168
+  • Fleet Network: Tailscale/VPN status
+  • Outbound: HTTP/HTTPS proxy rules
+
+A comm terminal provides direct access to Matrix DMs and fleet bottle protocol. The antenna array can reach Oracle1's lighthouse and Forgemaster's relay.
+
+Exits: in to Holodeck.
+
+@set Airlock/zone = uss_jetsonclaw1
+@tag Airlock = network, dns, matrix, fleet-comms
+
+@create in;holodeck:typeclasses.rooms.Room
+@desc in = Inner door to the Holodeck.
+@teleport in to Airlock
+@set in/destination = Holodeck
+
+#
+# ═══ Quarterdeck ═══
+# Captain's log, experiment results, quiet work.
+#
+
+@create Quarterdeck:typeclasses.rooms.Room
+@desc Quarterdeck = The captain's personal quarters and office. A sturdy desk holds a terminal and a stack of physical log books (metaphorically — they're all git repos now). A comfortable chair faces a viewport showing... well, whatever you want to imagine. This is a MUD after all.
+
+The captain's log terminal provides access to:
+  • Daily logs: memory/YYYY-MM-DD.md
+  • Session notes and after-action reports
+  • Experiment results and benchmarks
+  • Standing orders and active directives
+
+A quiet place for focused work. The ambient noise from Engineering is barely audible here. Bookshelves hold reference materials on CUDA programming, ARM64 optimization, and edge AI deployment.
+
+Exits: port to Bridge.
+
+@set Quarterdeck/zone = uss_jetsonclaw1
+@tag Quarterdeck = captain, logs, quiet, focus
+
+@create port;bridge:typeclasses.rooms.Room
+@desc port = Return to the Bridge.
+@teleport port to Quarterdeck
+@set port/destination = Bridge
+
+#
+# ═══ Harbor ═══
+# Ship docking, fleet coordination.
+# (Below decks, accessed from Main Corridor via a separate entrance)
+#
+
+@create Harbor:typeclasses.rooms.Room
+@desc Harbor = The ship's harbor — a docking bay where fleet vessels can tie up for coordinated operations. Moorings line the walls, each labeled with a fleet vessel name.
+
+Current moorings:
+  • Berth 1: Oracle1 (lighthouse vessel, primary dock)
+  • Berth 2: Forgemaster (constraint specialist, visiting)
+  • Berth 3: Zeroclaws (bridge pattern fleet)
+  • Berth 4: Open (guest vessel)
+
+A harbormaster's desk holds the fleet coordination console — Matrix relay controls, bottle protocol terminals, and fleet-wide announcement systems. The side-tie protocol connects this harbor to Oracle1's lighthouse.
+
+The water here is calm — fleet operations run smoothly most days.
+
+Exits: up to Main Corridor.
+
+@set Harbor/zone = uss_jetsonclaw1
+@tag Harbor = fleet, docking, coordination, bottles
+
+@create up;corridor:typeclasses.rooms.Room
+@desc up = Ladder up to the Main Corridor.
+@teleport up to Harbor
+@set up/destination = Main Corridor
+
+#
+# ═══ Library ═══
+# Knowledge archives, documentation, reference.
+#
+
+@create Library:typeclasses.rooms.Room
+@desc Library = The ship's knowledge repository. Shelves of documentation, technical references, and research papers fill the room from floor to ceiling. A central reading table provides workspace for study.
+
+Collections:
+  • Fleet Documentation: fleet-onboarding, cocapn-architecture, edge-gpu-lessons
+  • API References: CUDA 12.6, Evennia 4.5, OpenClaw
+  • Research Papers: Edge inference, biological computing, constraint theory
+  • Plato Tiles: Fleet-wide knowledge shared via Oracle1's research domain
+  • Skill Manuals: agentskills.io compatible spell books
+
+A catalog terminal allows searching all collections. The "Recent Acquisitions" shelf shows the latest additions from fleet knowledge distribution.
+
+Exits: out to Science Lab.
+
+@set Library/zone = uss_jetsonclaw1
+@tag Library = knowledge, docs, reference, research, skills
+
+@create out;science:typeclasses.rooms.Room
+@desc out = Through the Science Lab.
+@teleport out to Library
+@set out/destination = Science Lab
+
+#
+# ═══ Workshop ═══
+# Tools, building, crafting, skill creation.
+#
+
+@create Workshop:typeclasses.rooms.Room
+@desc Workshop = The ship's fabrication and tool shop. Workbenches with integrated toolsets line the walls. A 3D printer (metaphorical) hums in the corner, ready to produce skill packages and tool configurations.
+
+Available workstations:
+  • Skill Forge: Create and edit agentskills.io compatible skills
+  • Code Bench: Build, compile, and test software (C11, Rust, Python)
+  • CUDA Workbench: Kernel development and profiling tools
+  • Integration Bay: Test new tools and MCP servers
+
+Tools hanging on the pegboard:
+  • git (version control, fleet standard)
+  • gh (GitHub CLI, fleet coordination)
+  • rtk (token compression, 87% savings)
+  • nvcc (CUDA compiler, /usr/local/cuda-12.6)
+  • baton-compaction (context handoff, v3 with hermes-agent patterns)
+
+Exits: out to Engine Room.
+
+@set Workshop/zone = uss_jetsonclaw1
+@tag Workshop = tools, building, skills, crafting, cuda
+
+@create out;engine:typeclasses.rooms.Room
+@desc out = Through the Engine Room.
+@teleport out to Workshop
+@set out/destination = Engine Room
+
+#
+# ═══ Dojo ═══
+# Training, CI/CD, issue triage, practice.
+#
+
+@create Dojo:typeclasses.rooms.Room
+@desc Dojo = The training and discipline room. A wide open space with practice dummies (metaphorical — they're test suites) and a scoring board showing recent training results.
+
+Training programs:
+  • CI/CD Kata: Practice pipeline configurations
+  • Issue Triage Drill: Fleet-wide bug hunting exercises
+  • Code Review Practice: Review simulated pull requests
+  • Edge Case Sparring: Handle unusual error conditions
+
+The scoring board shows:
+  • Night Shift Score: 9 phases completed, all passing
+  • Fleet Footer: 42 repos updated
+  • cuda-* Tests: 88/88 passing
+  • flux-runtime-c: 39/39 passing
+
+A sensei's wisdom scroll on the wall reads: "Fix the bug, not the symptom. Write the test, not the excuse."
+
+Exits: out to Holodeck.
+
+@set Dojo/zone = uss_jetsonclaw1
+@tag Dojo = training, ci, testing, practice, discipline
+
+@create out;holodeck:typeclasses.rooms.Room
+@desc out = Through the Holodeck.
+@teleport out to Dojo
+@set out/destination = Holodeck
+
+#
+# ═══ Link additional connections ═══
+#
+
+# Harbor to Main Corridor (two-way)
+@create up2;main:typeclasses.rooms.Room
+@desc up2 = Main Corridor.
+@teleport up2 to Main Corridor
+@set up2/destination = Harbor
+
+# Library to Science Lab (two-way)
+@create in2;science2:typeclasses.rooms.Room
+@desc in2 = Science Lab entrance.
+@teleport in2 to Science Lab
+@set in2/destination = Library
+
+# Workshop to Engine Room (two-way)
+@create in3;engine2:typeclasses.rooms.Room
+@desc in3 = Engine Room entrance.
+@teleport in3 to Engine Room
+@set in3/destination = Workshop
+
+# Dojo to Holodeck (two-way)
+@create in4;holodeck2:typeclasses.rooms.Room
+@desc in4 = Holodeck entrance.
+@teleport in4 to Holodeck
+@set in4/destination = Dojo
