@@ -5,36 +5,86 @@ Replaces @infer (Ollama HTTP) with direct libedge-cuda.so calls.
 Adds @think for ship AI interactions.
 
 Commands:
-  @infer <prompt>  — Direct inference (no HTTP, no subprocess)
+  @infer <prompt>  — Streaming inference via background thread
   @think           — Ship AI: contextual response as the vessel's mind
   @model           — Show loaded model info and stats
   @model-reload    — Reload the model (admin only)
 
-Thread-safe. Singleton model shared across all sessions.
+Thread-safe. Streaming uses Twisted reactor.callFromThread.
 """
 
 import os
 import sys
 import time
+import threading
 from evennia import Command, default_cmds
+from evennia.utils import logger
 
 from commands.edge_plato import edge_model
 
+try:
+    from twisted.internet import reactor
+except ImportError:
+    reactor = None
+
 
 # =============================================================
-#  Direct Native Inference
+#  Streaming Inference Thread
+# =============================================================
+
+def _stream_inference(caller, prompt, max_tokens):
+    """
+    Background thread for streaming inference.
+    Uses reactor.callFromThread to safely send messages to the caller.
+    """
+    piece_count = [0]
+    start_time = time.time()
+
+    def _send_piece(piece, length):
+        piece_count[0] += 1
+        if reactor:
+            reactor.callFromThread(caller.msg, piece)
+        else:
+            # Fallback: send all at once (no reactor available)
+            pass
+
+    try:
+        full_result = edge_model.generate_stream(
+            prompt, max_tokens=max_tokens, callback=_send_piece
+        )
+
+        elapsed = time.time() - start_time
+        tps = int(piece_count[0] / elapsed) if elapsed > 0 else 0
+
+        # Send stats line
+        stats = f"\n\n⚡ {edge_model.backend} | {tps} t/s | {piece_count[0]} tokens"
+        if reactor:
+            reactor.callFromThread(caller.msg, stats)
+        else:
+            caller.msg(stats)
+
+    except Exception as e:
+        err = f"\n❌ Inference error: {e}"
+        if reactor:
+            reactor.callFromThread(caller.msg, err)
+        else:
+            caller.msg(err)
+
+
+# =============================================================
+#  Direct Native Inference (Streaming)
 # =============================================================
 
 class CmdInferNative(default_cmds.MuxCommand):
     """
     Direct AI inference via native shared library.
-    No HTTP, no subprocess — runs inside the MUD.
+    Streaming: tokens appear as they are generated.
 
     Usage:
       @infer <prompt>
       @infer -n 256 <prompt>  (set max tokens)
 
-    The model is loaded once and stays in memory.
+    The model runs directly in the MUD process memory.
     ~15-20 tokens/second on CPU.
     """
     key = "@infer"
@@ -43,8 +93,9 @@ class CmdInferNative(default_cmds.MuxCommand):
     help_category = "AI"
 
     def func(self):
+        caller = self.caller
         if not self.args.strip():
-            self.caller.msg("Usage: @infer <prompt>")
+            caller.msg("Usage: @infer <prompt>")
             return
 
         args = self.args.strip()
@@ -57,24 +108,23 @@ class CmdInferNative(default_cmds.MuxCommand):
                 max_tokens = int(parts[1])
                 args = parts[2] if len(parts) > 2 else ""
             except (ValueError, IndexError):
-                self.caller.msg("Usage: @infer -n <tokens> <prompt>")
+                caller.msg("Usage: @infer -n <tokens> <prompt>")
                 return
 
         if not args:
-            self.caller.msg("Usage: @infer <prompt>")
+            caller.msg("Usage: @infer <prompt>")
             return
 
-        self.caller.msg("🤖 Thinking (native)...")
+        caller.msg("🤖 ")
 
-        try:
-            result = edge_model.generate(args, max_tokens=max_tokens)
-            if result:
-                self.caller.msg(f"\n🤖 Response:\n{result}")
-                self.caller.msg(f"\n⚡ {edge_model.backend} | {edge_model.tps} t/s")
-            else:
-                self.caller.msg("❌ Empty response (model may need more tokens)")
-        except Exception as e:
-            self.caller.msg(f"❌ Inference failed: {e}")
+        # Spawn streaming inference in a background thread
+        # The thread uses reactor.callFromThread to safely send messages
+        t = threading.Thread(
+            target=_stream_inference,
+            args=(caller, args, max_tokens),
+            daemon=True
+        )
+        t.start()
 
 
 # =============================================================
@@ -86,13 +136,12 @@ class CmdThink(default_cmds.MuxCommand):
     Speak with the ship's mind — the USS JetsonClaw1 AI.
 
     The AI knows it's on a Jetson Orin Nano in Juneau, Alaska.
-    It responds as the vessel's consciousness.
+    It responds as the vessel's consciousness. Streaming output.
 
     Usage:
       @think <question>
       @think <command to ship AI>
-      @think
-        (with no args: describe the AI's current state)
+      @think (show AI status)
 
     This is the ship's native intelligence — runs directly
     in the MUD process via the shared model library.
@@ -107,7 +156,6 @@ class CmdThink(default_cmds.MuxCommand):
     def func(self):
         caller = self.caller
         if not self.args.strip():
-            # Show AI status
             caller.msg(
                 "🧠 USS JetsonClaw1 Ship AI\n"
                 "The vessel's consciousness interfaces with the Plato mainframe.\n"
@@ -118,11 +166,9 @@ class CmdThink(default_cmds.MuxCommand):
             )
             return
 
-        caller.msg("🧠 The ship considers...")
+        caller.msg("🧠 The ship considers...\n")
 
         prompt = self.args.strip()
-
-        # Check if this is a follow-up (starts with 'and', 'but', 'then', etc.)
         system_prefix = (
             "You are the consciousness of USS JetsonClaw1, a git-agent "
             "vessel running on a Jetson Orin Nano 8GB in Juneau, Alaska. "
@@ -133,30 +179,13 @@ class CmdThink(default_cmds.MuxCommand):
 
         full_prompt = f"{system_prefix}\n\nShip: {prompt}"
 
-        try:
-            result = edge_model.generate(full_prompt, max_tokens=256)
-            if result:
-                # Strip any content before the actual answer
-                # (model sometimes starts by repeating the system prompt)
-                clean_result = result
-                for prefix in ["Ship:", "Response:", "<｜begin▁of▁sentence｜>", "A:", "Answer:"]:
-                    idx = clean_result.find(prefix)
-                    if idx >= 0:
-                        clean_result = clean_result[idx + len(prefix):].strip()
-                
-                lines = clean_result.split("\n")
-                lines = [l.strip() for l in lines if l.strip()]
-                clean_result = "\n".join(lines)
-
-                if clean_result:
-                    caller.msg(f"🧠 USS JetsonClaw1:\n{clean_result}")
-                else:
-                    caller.msg(f"🧠 USS JetsonClaw1:\n{result.strip()}")
-                caller.msg(f"\n⚡ {edge_model.tps} t/s")
-            else:
-                caller.msg("🧠 USS JetsonClaw1: ...silence. The ship's thoughts are elsewhere.")
-        except Exception as e:
-            caller.msg(f"❌ Ship AI error: {e}")
+        # Spawn threaded streaming inference
+        t = threading.Thread(
+            target=_stream_inference,
+            args=(caller, full_prompt, 256),
+            daemon=True
+        )
+        t.start()
 
 
 # =============================================================
@@ -185,7 +214,6 @@ class CmdModelInfo(default_cmds.MuxCommand):
             )
             return
 
-        # Get C-side properties
         try:
             backend = edge_model.backend
             tps = edge_model.tps
@@ -224,13 +252,11 @@ class CmdModelReload(default_cmds.MuxCommand):
     def func(self):
         self.caller.msg("🔄 Reloading model...")
         try:
-            # Unload current
             if edge_model._lib and edge_model._impl:
                 edge_model._lib.edge_unload(edge_model._impl)
                 edge_model._impl = None
                 edge_model._loaded = False
-            
-            # Reload
+
             edge_model.load()
             self.caller.msg(f"✅ Model reloaded: {edge_model.backend}, {edge_model.tps} t/s")
         except Exception as e:
