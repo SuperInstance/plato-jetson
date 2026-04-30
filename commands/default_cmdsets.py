@@ -34,6 +34,17 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         #
         # any commands you add below will overload the default ones.
         #
+        from commands.tile_commands import CmdTiles, CmdTile, CmdTileSearch, CmdTileCreate, CmdRooms
+        from commands.system_commands import CmdSystemStatus, CmdInfer, CmdFleet, CmdFleetRead
+        self.add(CmdTiles)
+        self.add(CmdTile)
+        self.add(CmdTileSearch)
+        self.add(CmdTileCreate)
+        self.add(CmdRooms)
+        self.add(CmdSystemStatus)
+        self.add(CmdInfer)
+        self.add(CmdFleet)
+        self.add(CmdFleetRead)
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):
