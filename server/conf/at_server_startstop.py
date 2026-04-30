@@ -1,71 +1,95 @@
 """
-Server startstop hooks
+Server startstop hooks — with native AI model pre-loading.
 
-This module contains functions called by Evennia at various
-points during its startup, reload and shutdown sequence. It
-allows for customizing the server operation as desired.
+Loads libedge-cuda.so into the MUD process at server start.
+The model stays resident in memory across all player sessions.
 
-This module must contain at least these global functions:
-
-at_server_init()
-at_server_start()
-at_server_stop()
-at_server_reload_start()
-at_server_reload_stop()
-at_server_cold_start()
-at_server_cold_stop()
-
+Hooks:
+  at_server_init()        — Load native AI model
+  at_server_cold_start()  — Log model info
+  at_server_stop()        — Unload model
 """
+
+import os
+import sys
 
 
 def at_server_init():
     """
-    This is called first as the server is starting up, regardless of how.
+    Called first as the server starts, regardless of how.
+    This is where we pre-load the native AI model into the MUD process.
     """
-    pass
+    # Set env to avoid CUDA crashes due to depleted CMA pool
+    if "CUDA_VISIBLE_DEVICES" not in os.environ:
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+    try:
+        from commands.edge_plato import edge_model
+        edge_model.load()
+        print(f"\n{'='*60}")
+        print(f"🤖 NATIVE AI ENGINE LOADED")
+        print(f"   Backend: {edge_model.backend}")
+        print(f"   Speed:   {edge_model.tps} t/s")
+        print(f"   Model:   {edge_model._model_path}")
+        print(f"{'='*60}\n")
+    except Exception as e:
+        print(f"\n⚠️  Native AI model not loaded: {e}")
+        print("   @infer and @think commands will auto-load on first use.\n")
 
 
 def at_server_start():
     """
-    This is called every time the server starts up, regardless of
-    how it was shut down.
+    Called every time the server starts up.
     """
     pass
 
 
 def at_server_stop():
     """
-    This is called just before the server is shut down, regardless
-    of it is for a reload, reset or shutdown.
+    Called just before the server shuts down.
+    Unload the native model to free memory cleanly.
     """
-    pass
+    try:
+        from commands.edge_plato import edge_model
+        if edge_model.loaded:
+            edge_model._lib.edge_unload(edge_model._impl)
+            print("🧠 Native AI model unloaded.")
+    except:
+        pass
 
 
 def at_server_reload_start():
     """
-    This is called only when server starts back up after a reload.
+    Called when server starts back up after a reload.
+    The model is typically still loaded in shared memory,
+    but we re-attach to be safe.
     """
-    pass
+    at_server_init()
 
 
 def at_server_reload_stop():
     """
-    This is called only time the server stops before a reload.
+    Called when the server stops before a reload.
     """
     pass
 
 
 def at_server_cold_start():
     """
-    This is called only when the server starts "cold", i.e. after a
-    shutdown or a reset.
+    Called only when the server starts "cold" (after shutdown/reset).
+    The model was fully unloaded — reload it.
     """
-    pass
+    at_server_init()
 
 
 def at_server_cold_stop():
     """
-    This is called only when the server goes down due to a shutdown or
-    reset.
+    Called only when the server goes down due to shutdown or reset.
     """
-    pass
+    try:
+        from commands.edge_plato import edge_model
+        if edge_model.loaded:
+            edge_model._lib.edge_unload(edge_model._impl)
+            print("🧠 Native AI model unloaded (cold stop).")
+    except:
+        pass
