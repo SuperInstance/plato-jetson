@@ -36,6 +36,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         #
         from commands.tile_commands import CmdTiles, CmdTile, CmdTileSearch, CmdTileCreate, CmdRooms
         from commands.system_commands import CmdSystemStatus, CmdInfer, CmdFleet, CmdFleetRead
+        from commands.system_commands import CmdMesh, CmdMeshDm
         self.add(CmdTiles)
         self.add(CmdTile)
         self.add(CmdTileSearch)
@@ -45,6 +46,8 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdInfer)
         self.add(CmdFleet)
         self.add(CmdFleetRead)
+        self.add(CmdMesh)
+        self.add(CmdMeshDm)
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):

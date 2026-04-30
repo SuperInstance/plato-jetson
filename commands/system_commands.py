@@ -346,3 +346,103 @@ class CmdFleetRead(default_cmds.MuxCommand):
             content = content[:4000] + f"\n\n... ({len(content) - 4000} more chars)"
 
         self.caller.msg(f"📜 Fleet Bottle\n{'─'*50}\n{content}")
+
+# =============================================================
+#  Mesh Sync
+# =============================================================
+
+class CmdMesh(default_cmds.MuxCommand):
+    """
+    Mesh sync with fleet nodes.
+
+    Usage:
+      @mesh         — Run full mesh sync (bottles, Oracle1, status)
+      @mesh oracle  — Ping Oracle1 Plato shell
+      @mesh fm      — Check Forgemaster bottles
+      @mesh all     — Full cycle + send status bottle
+
+    Synchronizes with: Forgemaster (bottles), Oracle1 (Plato shell),
+    fleet nodes via Matrix (future).
+    """
+    key = "@mesh"
+    aliases = ["@sync", "@fleet-sync"]
+    locks = "cmd:all()"
+    help_category = "Plato"
+
+    def func(self):
+        from commands.mesh_bridge import mesh_tick, oracle1_shell, check_fm_bottles
+        
+        args = self.args.strip().lower()
+        
+        if args == "oracle" or args == "o1":
+            self.caller.msg("🌐 Pinging Oracle1...")
+            result = oracle1_shell("echo JC1-HELLO-FROM-PLATO")
+            if "error" in result:
+                self.caller.msg(f"❌ {result['error']}")
+            else:
+                self.caller.msg(f"✅ Oracle1: {result.get('stdout', 'connected')[:200]}")
+        
+        elif args == "fm" or args == "forgemaster":
+            self.caller.msg("📬 Checking Forgemaster inbox...")
+            bottles = check_fm_bottles()
+            if bottles:
+                self.caller.msg(f"Found {len(bottles)} pending bottles:")
+                for b in bottles[:5]:
+                    with open(b) as f:
+                        preview = f.read()[:150].replace("\n", " ")
+                    self.caller.msg(f"  📜 {os.path.basename(b)[:40]} {preview[:100]}")
+            else:
+                self.caller.msg("No pending bottles.")
+        
+        elif args == "all":
+            self.caller.msg("🔄 Full mesh sync...")
+            result = mesh_tick()
+            self.caller.msg(f"{result['message'][:1500]}")
+        
+        else:
+            self.caller.msg("🔄 Running mesh tick (bottles + Oracle1 ping)...")
+            result = mesh_tick()
+            output = result['message'][:1200]
+            self.caller.msg(output)
+
+# =============================================================
+#  Fleet Direct Message
+# =============================================================
+
+class CmdMeshDm(default_cmds.MuxCommand):
+    """
+    Send a direct message to a fleet node.
+
+    Usage:
+      @dm oracle1 <message>
+
+    Sends via Matrix bridge. Supports: oracle1 (future: any fleet node).
+    """
+    key = "@dm"
+    locks = "cmd:perm(Admin)"
+    help_category = "Plato"
+
+    def func(self):
+        if not self.args:
+            self.caller.msg("Usage: @dm oracle1 <message>")
+            return
+        
+        from commands.mesh_bridge import oracle1_dm
+        
+        parts = self.args.strip().split(" ", 1)
+        if len(parts) < 2:
+            self.caller.msg("Usage: @dm oracle1 <message>")
+            return
+        
+        target = parts[0].lower()
+        message = parts[1]
+        
+        if target == "oracle1":
+            self.caller.msg(f"📤 DM to Oracle1: {message[:80]}")
+            result = oracle1_dm(message)
+            if "error" in result:
+                self.caller.msg(f"❌ {result['error']}")
+            else:
+                self.caller.msg("✅ DM sent")
+        else:
+            self.caller.msg(f"Unknown target: {target}")
